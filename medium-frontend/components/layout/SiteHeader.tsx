@@ -1,8 +1,8 @@
 import Link from "next/link"
 export default function SiteHeader(){
   return(
-    <header className="boarder-b bg white">
-      <div className="mx-outo max-w-4xl px-4 h-14 flex items-center justify-between">
+    <header className="border-b bg-white">
+      <div className="mx-auto max-w-4xl px-4 h-14 flex items-center justify-between">
         <Link href="/" className="font-semibold text-lg">
           Medium Clone
         </Link>
