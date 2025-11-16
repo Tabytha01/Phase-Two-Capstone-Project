@@ -1,5 +1,5 @@
 import Container from "@/components/layout/Container"
-import Button from "@/components/ui/Button"
+import Button from "@/components/ui/button"
 
 export default function HomePage() {
   return (
