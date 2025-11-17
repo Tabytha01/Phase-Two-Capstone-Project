@@ -2,6 +2,7 @@
 import "./globals.css"
 import type { Metadata } from "next"
 import SiteHeader from "@/components/layout/SiteHeader"
+import { AuthProvider } from "@/components/providers/AuthProvider"
 
 export const metadata: Metadata = {
   title: "Medium Clone",
@@ -12,8 +13,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="bg-gray-50 text-gray-900">
-        <SiteHeader />
-        <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
+        <AuthProvider>
+          <SiteHeader />
+          <main className="mx-auto max-w-4xl px-4 py-6">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   )
