@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma} from "@/lib/prisma"
-import { PostPayloadShema } from "@lib/validators/post";
+import { postPayloadSchema } from "@/lib/validators/post"
 
 export async function GET(){
     const posts = await prisma.post.findMany({
