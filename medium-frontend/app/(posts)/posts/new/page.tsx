@@ -4,6 +4,7 @@
 import { ChangeEvent, FormEvent, useRef, useState } from "react"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { useRouter } from "next/navigation"
 import RequireAuth from "@/components/auth/RequireAuth"
 import { useAuth } from "@/components/providers/AuthProvider"
 
@@ -41,6 +42,7 @@ export default function NewPostPage() {
 
 function EditorShell() {
   const { user } = useAuth()
+  const router = useRouter()
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -48,6 +50,7 @@ function EditorShell() {
   const [preview, setPreview] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null)
 
   const insertSyntax = (prefix: string, suffix = "") => {
     const textarea = textareaRef.current
@@ -73,8 +76,7 @@ function EditorShell() {
     const file = event.target.files?.[0]
     if (!file) return
     setStatus("Uploading image...")
-    const dataUrl = await fileToDataUrl(file)
-    insertSyntax(`![${file.name}](`, `${dataUrl})`)
+    await handleCoverUpload(file)
     setStatus("Image added to the editor.")
   }
 
@@ -102,17 +104,41 @@ function EditorShell() {
 
   const publishPost = async (event: FormEvent) => {
     event.preventDefault()
-    if (!title.trim() || !content.trim()) {
-      setStatus("Title and content are required to publish.")
+    if (!title.trim() || !content.trim() || !user) {
+      setStatus("Title, content, and a signed-in user are required to publish.")
       return
     }
+
     setIsPublishing(true)
     setStatus("Publishing...")
-    await new Promise((resolve) => setTimeout(resolve, 1200))
-    setIsPublishing(false)
-    setStatus("Post published (mock). Hook up API in Lab 4.")
+
+    const payload = {
+      title: title.trim(),
+      slug: title.trim().toLowerCase().replace(/\s+/g, "-"),
+      content,
+      excerpt: content.slice(0, 180),
+      status: "PUBLISHED",
+      authorId: user.id,
+      coverImage: coverImageUrl ?? undefined,
+    }
+
+    const res = await fetch("/api/posts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+
+    if (!res.ok) {
+      setStatus("Error publishing post.")
+      setIsPublishing(false)
+      return
+    }
+
+    const post = await res.json()
+    setStatus("Post published!")
     setTitle("")
     setContent("")
+    router.push(`/posts/${post.slug}`)
   }
 
   const toolbar: Array<{ label: string; prefix: string; suffix?: string }> = [
@@ -123,7 +149,16 @@ function EditorShell() {
     { label: "Quote", prefix: "> " },
     { label: "Code", prefix: "```\n", suffix: "\n```" },
     { label: "Link", prefix: "[text](", suffix: ")" },
-  ] as const
+  ]
+
+  async function handleCoverUpload(file: File) {
+    const body = new FormData()
+    body.append("file", file)
+
+    const res = await fetch("/api/uploads", { method: "POST", body })
+    const data = await res.json()
+    setCoverImageUrl(data.url)
+  }
 
   return (
     <section className="space-y-6">
@@ -182,7 +217,9 @@ function EditorShell() {
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             <h2 className="text-lg font-semibold">Preview</h2>
             <article className="prose prose-neutral mt-4 max-w-none">
-              <Markdown remarkPlugins={[remarkGfm]}>{content || "_Nothing to preview yet._"}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]}>
+                {content || "_Nothing to preview yet._"}
+              </Markdown>
             </article>
           </div>
         )}
@@ -229,13 +266,4 @@ function EditorShell() {
       )}
     </section>
   )
-}
-
-async function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
 }
